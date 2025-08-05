@@ -167,7 +167,27 @@ def demo_ask():
         }
         
         # Use the AI assistant to answer
-        response = ai_assistant.generate_enhanced_response(question, demo_user_info)
+        try:
+            response = ai_assistant.generate_enhanced_response(question, demo_user_info)
+            
+            # Check if we got the generic error message
+            if "texniki problem var" in response:
+                # Try the simpler method instead
+                response = ai_assistant.generate_response(question, demo_user_info)
+                
+            # If still getting error, try direct knowledge base search
+            if "texniki problem var" in response:
+                # Fallback to direct knowledge base search
+                kb_response = knowledge_base.search(question)
+                response = f"Tapılan məlumatlar:\n\n{kb_response}"
+                
+        except Exception as ai_error:
+            # If AI fails completely, use knowledge base directly
+            try:
+                kb_response = knowledge_base.search(question)
+                response = f"Məlumat bazasından tapılan nəticələr:\n\n{kb_response}"
+            except Exception as kb_error:
+                response = f"Xəta baş verdi: AI Error: {str(ai_error)}, KB Error: {str(kb_error)}"
         
         return jsonify({
             'question': question,
