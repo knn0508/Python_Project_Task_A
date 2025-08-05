@@ -225,12 +225,130 @@ def simple_login():
                 };
                 
                 if (users[username] === password) {
-                    alert('Login successful! Redirecting to demo...');
-                    window.location.href = '/demo';
+                    alert('Login successful! Redirecting to AI interface...');
+                    window.location.href = '/ai-interface';
                 } else {
                     alert('Invalid credentials. Please use demo credentials.');
                 }
             }
+        </script>
+    </body>
+    </html>
+    """
+    return html
+
+@app.route('/ai-interface')
+def ai_interface():
+    """Simple AI interface for testing"""
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>AI Document Management - AI Assistant</title>
+        <style>
+            body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
+            .chat-container { background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; max-height: 400px; overflow-y: auto; }
+            .question-form { margin: 20px 0; }
+            textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; resize: vertical; }
+            button { background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 10px 5px 0 0; }
+            button:hover { background: #218838; }
+            .loading { color: #007bff; font-style: italic; }
+            .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 5px; margin: 10px 0; }
+            .answer { background: #d4edda; padding: 15px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #28a745; }
+            .question { background: #e2e3e5; padding: 10px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #6c757d; }
+            .sample-questions { background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; }
+            .sample-btn { background: #ffc107; color: #212529; padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer; margin: 5px; font-size: 12px; }
+        </style>
+    </head>
+    <body>
+        <h1>🤖 AI Document Management Assistant</h1>
+        <p>Ask questions about the ministry, departments, procedures, and documents.</p>
+        
+        <div class="sample-questions">
+            <h3>📝 Sample Questions (Click to try):</h3>
+            <button class="sample-btn" onclick="askQuestion('What departments does the ministry have?')">Ministry Departments</button>
+            <button class="sample-btn" onclick="askQuestion('What are the contact details for HR?')">HR Contact Info</button>
+            <button class="sample-btn" onclick="askQuestion('How do I apply for vacation leave?')">Vacation Leave</button>
+            <button class="sample-btn" onclick="askQuestion('What are the working hours?')">Working Hours</button>
+            <button class="sample-btn" onclick="askQuestion('How much is the daily allowance for business travel?')">Travel Allowance</button>
+        </div>
+        
+        <div class="question-form">
+            <textarea id="questionInput" placeholder="Ask your question here..." rows="3"></textarea><br>
+            <button onclick="submitQuestion()">Ask AI</button>
+            <button onclick="clearChat()">Clear Chat</button>
+        </div>
+        
+        <div id="chatContainer" class="chat-container">
+            <p>💡 Welcome! Ask me anything about the ministry, departments, procedures, or documents.</p>
+        </div>
+        
+        <script>
+            function askQuestion(question) {
+                document.getElementById('questionInput').value = question;
+                submitQuestion();
+            }
+            
+            function submitQuestion() {
+                const question = document.getElementById('questionInput').value.trim();
+                if (!question) {
+                    alert('Please enter a question');
+                    return;
+                }
+                
+                const chatContainer = document.getElementById('chatContainer');
+                
+                // Add question to chat
+                chatContainer.innerHTML += '<div class="question"><strong>You:</strong> ' + question + '</div>';
+                
+                // Add loading indicator
+                chatContainer.innerHTML += '<div class="loading" id="loading">🤖 AI is thinking...</div>';
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+                
+                // Make API call
+                fetch('/demo-ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({question: question})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Remove loading indicator
+                    document.getElementById('loading').remove();
+                    
+                    if (data.error) {
+                        chatContainer.innerHTML += '<div class="error"><strong>Error:</strong> ' + data.error + '<br><strong>Message:</strong> ' + data.message + '</div>';
+                    } else {
+                        chatContainer.innerHTML += '<div class="answer"><strong>🤖 AI Assistant:</strong><br>' + data.answer + '</div>';
+                    }
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                })
+                .catch(error => {
+                    // Remove loading indicator
+                    const loading = document.getElementById('loading');
+                    if (loading) loading.remove();
+                    
+                    chatContainer.innerHTML += '<div class="error"><strong>Network Error:</strong> Could not connect to AI service. Please try again.</div>';
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                });
+                
+                // Clear input
+                document.getElementById('questionInput').value = '';
+            }
+            
+            function clearChat() {
+                document.getElementById('chatContainer').innerHTML = '<p>💡 Welcome! Ask me anything about the ministry, departments, procedures, or documents.</p>';
+            }
+            
+            // Allow Enter key to submit
+            document.getElementById('questionInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    submitQuestion();
+                }
+            });
         </script>
     </body>
     </html>
