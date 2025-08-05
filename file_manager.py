@@ -154,7 +154,14 @@ class DocumentChunker:
 class FileManager:
     """Enhanced file management system for handling dozens of files"""
 
-    def __init__(self, storage_dir: str = "documents", db_path: str = "file_index.db"):
+    def __init__(self, storage_dir: str = None, db_path: str = None):
+        # For serverless environments like Vercel, use /tmp directory
+        import os
+        if storage_dir is None:
+            storage_dir = os.environ.get('STORAGE_DIR', '/tmp/documents' if os.path.exists('/tmp') else 'documents')
+        if db_path is None:
+            db_path = os.environ.get('DB_PATH', '/tmp/file_index.db' if os.path.exists('/tmp') else 'file_index.db')
+        
         self.storage_dir = Path(storage_dir)
         self.storage_dir.mkdir(exist_ok=True)
         self.db_path = db_path

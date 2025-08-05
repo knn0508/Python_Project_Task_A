@@ -14,11 +14,33 @@ import sqlite3
 app = Flask(__name__)
 app.config.from_object(Config)
 
+# Global variables for components
+file_manager = None
+knowledge_base = None
+user_manager = None
+ai_assistant = None
+
+def initialize_components():
+    """Initialize components with error handling for serverless environment"""
+    global file_manager, knowledge_base, user_manager, ai_assistant
+    
+    try:
+        if file_manager is None:
+            file_manager = FileManager()
+            knowledge_base = EnhancedKnowledgeBase(file_manager)
+            user_manager = UserManager()
+            ai_assistant = EnhancedAIAssistant(knowledge_base, Config.GEMINI_API_KEY)
+            print("✅ Components initialized successfully")
+    except Exception as e:
+        print(f"❌ Error initializing components: {e}")
+        # Initialize with minimal functionality
+        if file_manager is None:
+            file_manager = FileManager()
+        if user_manager is None:
+            user_manager = UserManager()
+
 # Initialize components
-file_manager = FileManager()
-knowledge_base = EnhancedKnowledgeBase(file_manager)
-user_manager = UserManager()
-ai_assistant = EnhancedAIAssistant(knowledge_base, Config.GEMINI_API_KEY)
+initialize_components()
 
 
 def login_required(f):
@@ -46,6 +68,38 @@ def index():
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
+
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for Vercel deployment"""
+    try:
+        return jsonify({
+            'status': 'healthy',
+            'timestamp': datetime.now().isoformat(),
+            'components': {
+                'file_manager': file_manager is not None,
+                'knowledge_base': knowledge_base is not None,
+                'user_manager': user_manager is not None,
+                'ai_assistant': ai_assistant is not None
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+
+@app.route('/api/test')
+def api_test():
+    """Simple API test endpoint"""
+    return jsonify({
+        'message': 'API is working!',
+        'timestamp': datetime.now().isoformat(),
+        'app_name': 'AI Document Management System'
+    })
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -583,6 +637,7 @@ if __name__ == '__main__':
     print("🤖 Gemini 2.5 Flash AI Model: Ready")
     print("📁 File Management System: Ready")
     print("🔍 Document Search: Ready")
-    print(f"🌐 Server: http://{Config.HOST}:{Config.PORT}")
 
+# For local development
+if __name__ == "__main__":
     app.run(debug=Config.DEBUG, host=Config.HOST, port=Config.PORT)

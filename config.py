@@ -10,7 +10,8 @@ class Config:
     GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY') or "AIzaSyAk5UaULKxoV3CahPftPIwQA2Io4Ph3nno"
 
     # Database configuration
-    DATABASE_PATH = os.environ.get('DATABASE_PATH') or 'users.db'
+    # For Vercel, use /tmp directory for temporary database
+    DATABASE_PATH = os.environ.get('DATABASE_PATH') or '/tmp/users.db'
 
     # Session configuration
     PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
