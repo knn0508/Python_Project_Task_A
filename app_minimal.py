@@ -158,8 +158,16 @@ def demo_ask():
         
         question = data['question']
         
+        # Create dummy user info for demo mode
+        demo_user_info = {
+            'id': 'demo_user',
+            'username': 'demo',
+            'name': 'Demo User',
+            'role': 'admin'  # Give admin access for demo
+        }
+        
         # Use the AI assistant to answer
-        response = ai_assistant.ask_question(question)
+        response = ai_assistant.generate_enhanced_response(question, demo_user_info)
         
         return jsonify({
             'question': question,
