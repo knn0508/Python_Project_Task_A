@@ -38,10 +38,13 @@ def safe_import_and_init():
         
         # Try to initialize user manager with error handling
         try:
+            # Set the database path for serverless environment
+            os.environ['DATABASE_PATH'] = '/tmp/users.db'
             user_manager = UserManager()
             print("✅ User manager initialized")
         except Exception as e:
             print(f"⚠️ User manager failed: {e}")
+            # Try to create a minimal user manager without database
             user_manager = None
         
         # Try to initialize AI assistant with API key
@@ -159,6 +162,69 @@ def dashboard():
         return jsonify({
             'error': 'Dashboard unavailable',
             'message': str(e)
+        }), 500
+
+@app.route('/demo')
+def demo_access():
+    """Demo access without authentication"""
+    try:
+        if knowledge_base and ai_assistant:
+            return jsonify({
+                'message': 'Demo mode - AI Document Management System',
+                'status': 'ready',
+                'ai_available': True,
+                'knowledge_base_ready': True,
+                'demo_query_endpoint': '/demo-ask',
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                'message': 'Demo mode - Limited functionality',
+                'status': 'partial',
+                'ai_available': ai_assistant is not None,
+                'knowledge_base_ready': knowledge_base is not None,
+                'timestamp': datetime.now().isoformat()
+            })
+    except Exception as e:
+        return jsonify({
+            'error': 'Demo access failed',
+            'message': str(e)
+        }), 500
+
+@app.route('/demo-ask', methods=['POST'])
+def demo_ask():
+    """Demo AI assistant without authentication"""
+    try:
+        if not ai_assistant:
+            return jsonify({
+                'error': 'AI Assistant not available',
+                'message': 'AI components not properly initialized'
+            }), 503
+        
+        data = request.get_json()
+        if not data or 'question' not in data:
+            return jsonify({
+                'error': 'Missing question',
+                'message': 'Please provide a question in JSON format: {"question": "your question"}'
+            }), 400
+        
+        question = data['question']
+        
+        # Use the AI assistant to answer
+        response = ai_assistant.ask_question(question)
+        
+        return jsonify({
+            'question': question,
+            'answer': response,
+            'timestamp': datetime.now().isoformat(),
+            'mode': 'demo'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': 'AI query failed',
+            'message': str(e),
+            'timestamp': datetime.now().isoformat()
         }), 500
 
 @app.route('/simple')
