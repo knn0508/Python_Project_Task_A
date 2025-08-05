@@ -133,36 +133,138 @@ def health_check():
 def login():
     """Login page"""
     try:
-        if components_ready and user_manager:
-            return render_template('login.html')
-        else:
-            return jsonify({
-                'error': 'User management system not available',
-                'message': 'Components not properly initialized'
-            }), 503
+        return render_template('login.html')
     except Exception as e:
         return jsonify({
             'error': 'Template rendering failed',
+            'message': str(e),
+            'fallback': 'UI templates not found - using API mode'
+        }), 500
+
+@app.route('/login', methods=['POST'])
+def login_post():
+    """Handle login - simplified for demo"""
+    try:
+        data = request.get_json() if request.is_json else request.form
+        username = data.get('username')
+        password = data.get('password')
+        
+        # Simple demo authentication (since UserManager isn't working)
+        demo_users = {
+            'admin': {'password': 'admin123', 'name': 'Sistem Administratoru', 'role': 'admin'},
+            'nazir': {'password': 'nazir123', 'name': 'Əli Məmmədov', 'role': 'minister'},
+            'analitik': {'password': 'data123', 'name': 'Leyla Həsənova', 'role': 'analyst'}
+        }
+        
+        if username in demo_users and demo_users[username]['password'] == password:
+            # Set session
+            session['user_id'] = username
+            session['username'] = username
+            session['name'] = demo_users[username]['name']
+            session['role'] = demo_users[username]['role']
+            
+            if request.is_json:
+                return jsonify({'success': True, 'redirect': '/dashboard'})
+            else:
+                return redirect(url_for('dashboard'))
+        else:
+            if request.is_json:
+                return jsonify({'error': 'İstifadəçi adı və ya şifrə yanlışdır'}), 401
+            else:
+                return render_template('login.html', error='İstifadəçi adı və ya şifrə yanlışdır')
+                
+    except Exception as e:
+        return jsonify({
+            'error': 'Login failed',
             'message': str(e)
         }), 500
+
+@app.route('/logout')
+def logout():
+    """Logout user"""
+    session.clear()
+    return redirect(url_for('login'))
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
     """Dashboard page"""
     try:
-        if components_ready:
-            return render_template('dashboard.html')
-        else:
-            return jsonify({
-                'error': 'System not fully initialized',
-                'message': 'Please check system health'
-            }), 503
+        user_info = {
+            'id': session.get('user_id'),
+            'username': session.get('username'),
+            'name': session.get('name'),
+            'role': session.get('role')
+        }
+        return render_template('dashboard.html', user=user_info)
     except Exception as e:
         return jsonify({
             'error': 'Dashboard unavailable',
+            'message': str(e),
+            'user_info': session.get('name', 'Unknown')
+        }), 500
+
+@app.route('/files')
+@login_required
+def files():
+    """File management page"""
+    try:
+        user_info = {
+            'id': session.get('user_id'),
+            'username': session.get('username'),
+            'name': session.get('name'),
+            'role': session.get('role')
+        }
+        return render_template('files.html', user=user_info)
+    except Exception as e:
+        return jsonify({
+            'error': 'Files page unavailable',
             'message': str(e)
         }), 500
+
+@app.route('/ask', methods=['POST'])
+@login_required
+def ask_ai():
+    """AI assistant endpoint for logged-in users"""
+    try:
+        if not ai_assistant:
+            return jsonify({
+                'error': 'AI Assistant not available',
+                'message': 'AI components not properly initialized'
+            }), 503
+        
+        data = request.get_json() if request.is_json else request.form
+        question = data.get('question')
+        
+        if not question:
+            return jsonify({
+                'error': 'Missing question',
+                'message': 'Please provide a question'
+            }), 400
+        
+        # Use the AI assistant to answer
+        response = ai_assistant.ask_question(question)
+        
+        return jsonify({
+            'question': question,
+            'answer': response,
+            'timestamp': datetime.now().isoformat(),
+            'user': session.get('name', 'Unknown')
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': 'AI query failed',
+            'message': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+@app.route('/')
+def index():
+    """Main route - redirect to appropriate page"""
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
 
 @app.route('/demo')
 def demo_access():
