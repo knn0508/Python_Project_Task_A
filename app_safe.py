@@ -19,39 +19,60 @@ def safe_import_and_init():
     global file_manager, knowledge_base, user_manager, ai_assistant
     
     try:
-        # Try to import our modules
-        from models import EnhancedKnowledgeBase, UserManager, EnhancedAIAssistant
+        # Try to import our modules one by one
         from file_manager import FileManager
+        from models import EnhancedKnowledgeBase, UserManager, EnhancedAIAssistant
         from config import Config
         
-        # Initialize components
+        # Create necessary directories for serverless
+        os.makedirs('/tmp/documents', exist_ok=True)
+        os.makedirs('/tmp', exist_ok=True)
+        
+        # Initialize file manager first
         file_manager = FileManager()
+        print("✅ File manager initialized")
+        
+        # Initialize knowledge base
         knowledge_base = EnhancedKnowledgeBase(file_manager)
-        user_manager = UserManager()
+        print("✅ Knowledge base initialized")
+        
+        # Try to initialize user manager with error handling
+        try:
+            user_manager = UserManager()
+            print("✅ User manager initialized")
+        except Exception as e:
+            print(f"⚠️ User manager failed: {e}")
+            user_manager = None
         
         # Try to initialize AI assistant with API key
-        api_key = os.environ.get('GEMINI_API_KEY')
-        if api_key:
-            ai_assistant = EnhancedAIAssistant(knowledge_base, api_key)
-        else:
-            print("Warning: GEMINI_API_KEY not found")
+        try:
+            api_key = os.environ.get('GEMINI_API_KEY')
+            if api_key:
+                ai_assistant = EnhancedAIAssistant(knowledge_base, api_key)
+                print("✅ AI assistant initialized")
+            else:
+                print("⚠️ GEMINI_API_KEY not found")
+                ai_assistant = None
+        except Exception as e:
+            print(f"⚠️ AI assistant failed: {e}")
+            ai_assistant = None
             
-        print("✅ All components initialized successfully")
+        print("✅ Components initialization completed")
         return True
         
     except Exception as e:
-        print(f"❌ Error initializing components: {e}")
+        print(f"❌ Critical error in initialization: {e}")
         print(f"❌ Error type: {type(e).__name__}")
         import traceback
         traceback.print_exc()
         
-        # Initialize minimal components
+        # Initialize minimal components as fallback
         try:
             from file_manager import FileManager
             file_manager = FileManager()
-            print("✅ Basic file manager initialized")
-        except:
-            print("❌ Failed to initialize even basic components")
+            print("✅ Fallback: Basic file manager initialized")
+        except Exception as fallback_error:
+            print(f"❌ Fallback failed: {fallback_error}")
         
         return False
 
@@ -139,6 +160,62 @@ def dashboard():
             'error': 'Dashboard unavailable',
             'message': str(e)
         }), 500
+
+@app.route('/simple')
+def simple_endpoint():
+    """Simple endpoint that always works"""
+    return jsonify({
+        'message': 'AI Document Management System - Simple Mode',
+        'status': 'working',
+        'info': 'This endpoint works regardless of component status',
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/test-components')
+def test_components():
+    """Test individual components"""
+    results = {}
+    
+    # Test file manager
+    try:
+        if file_manager:
+            results['file_manager'] = 'working'
+        else:
+            results['file_manager'] = 'not_initialized'
+    except Exception as e:
+        results['file_manager'] = f'error: {str(e)}'
+    
+    # Test knowledge base
+    try:
+        if knowledge_base:
+            results['knowledge_base'] = 'working'
+        else:
+            results['knowledge_base'] = 'not_initialized'
+    except Exception as e:
+        results['knowledge_base'] = f'error: {str(e)}'
+    
+    # Test user manager
+    try:
+        if user_manager:
+            results['user_manager'] = 'working'
+        else:
+            results['user_manager'] = 'not_initialized'
+    except Exception as e:
+        results['user_manager'] = f'error: {str(e)}'
+    
+    # Test AI assistant
+    try:
+        if ai_assistant:
+            results['ai_assistant'] = 'working'
+        else:
+            results['ai_assistant'] = 'not_initialized'
+    except Exception as e:
+        results['ai_assistant'] = f'error: {str(e)}'
+    
+    return jsonify({
+        'component_tests': results,
+        'timestamp': datetime.now().isoformat()
+    })
 
 @app.errorhandler(404)
 def not_found(error):
